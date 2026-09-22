@@ -1,1 +1,2099 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Cidade de Keith Haring</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { 
+    width: 100%; height: 100%; overflow: hidden; 
+    background: #f5f0e1; font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', cursive;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  canvas { display: block; touch-action: none; }
+  
+  /* ============ TELA INICIAL ============ */
+  #startScreen {
+    position: fixed; inset: 0;
+    background: #FFE800;
+    z-index: 100;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 20px; overflow: hidden;
+    transition: opacity 0.5s, transform 0.5s;
+  }
+  #startScreen.hidden { opacity: 0; transform: scale(1.1); pointer-events: none; }
+  #startScreen::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: 
+      radial-gradient(circle at 10% 20%, #FF3B30 40px, transparent 42px),
+      radial-gradient(circle at 90% 30%, #007AFF 30px, transparent 32px),
+      radial-gradient(circle at 20% 80%, #FF2D95 35px, transparent 37px),
+      radial-gradient(circle at 80% 90%, #34C759 45px, transparent 47px),
+      radial-gradient(circle at 50% 10%, #AF52DE 25px, transparent 27px),
+      radial-gradient(circle at 95% 60%, #FF9500 30px, transparent 32px),
+      radial-gradient(circle at 5% 50%, #00C7BE 28px, transparent 30px);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  #startContent {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column;
+    align-items: center; max-width: 700px; width: 100%;
+    text-align: center;
+  }
+  .title-main {
+    font-family: 'Arial Black', 'Impact', sans-serif;
+    font-size: clamp(36px, 9vw, 90px);
+    font-weight: 900; line-height: 0.95;
+    color: #FF3B30;
+    -webkit-text-stroke: 4px #000;
+    paint-order: stroke fill;
+    text-shadow: 8px 8px 0 #000;
+    letter-spacing: -2px; margin-bottom: 8px;
+    transform: rotate(-3deg);
+    animation: titleBounce 2s ease-in-out infinite;
+  }
+  .title-sub {
+    font-family: 'Arial Black', 'Impact', sans-serif;
+    font-size: clamp(28px, 6.5vw, 65px);
+    font-weight: 900; color: #007AFF;
+    -webkit-text-stroke: 4px #000;
+    paint-order: stroke fill;
+    text-shadow: 6px 6px 0 #000;
+    letter-spacing: -2px; margin-bottom: 24px;
+    transform: rotate(2deg);
+  }
+  @keyframes titleBounce {
+    0%, 100% { transform: rotate(-3deg) translateY(0); }
+    50% { transform: rotate(-3deg) translateY(-6px); }
+  }
+  .credits-box {
+    background: #FFF; border: 6px solid #000;
+    border-radius: 20px; padding: 14px 24px;
+    box-shadow: 8px 8px 0 #000; margin-bottom: 20px;
+    transform: rotate(-1deg);
+  }
+  .credits-box .label {
+    font-size: clamp(11px, 2.5vw, 14px);
+    font-weight: bold; letter-spacing: 2px; margin-bottom: 6px;
+  }
+  .credits-box .names {
+    font-size: clamp(14px, 3.2vw, 20px);
+    font-weight: bold; color: #FF2D95; line-height: 1.4;
+  }
+  .assignment-badge {
+    background: #AF52DE; color: #fff;
+    font-family: 'Arial Black', sans-serif;
+    font-size: clamp(14px, 3.5vw, 22px);
+    font-weight: 900; padding: 8px 22px;
+    border: 5px solid #000; border-radius: 50px;
+    box-shadow: 5px 5px 0 #000; letter-spacing: 2px;
+    margin-bottom: 32px; transform: rotate(3deg);
+    -webkit-text-stroke: 1px #000;
+  }
+  #playBtn {
+    background: #34C759; border: 8px solid #000;
+    border-radius: 30px; padding: 18px 60px;
+    font-family: 'Arial Black', sans-serif;
+    font-size: clamp(24px, 6vw, 44px);
+    font-weight: 900; color: #000; cursor: pointer;
+    box-shadow: 10px 10px 0 #000;
+    letter-spacing: 3px;
+    transition: transform 0.1s;
+    -webkit-text-stroke: 1px #000;
+    animation: playPulse 1.5s ease-in-out infinite;
+  }
+  #playBtn:active, #playBtn.pressed {
+    transform: translate(6px, 6px); box-shadow: 4px 4px 0 #000;
+  }
+  @keyframes playPulse {
+    0%, 100% { transform: scale(1) rotate(-2deg); }
+    50% { transform: scale(1.05) rotate(2deg); }
+  }
+  .deco { position: absolute; pointer-events: none; z-index: 1; }
+  
+  /* ============ UI DE JOGO ============ */
+  #gameUI {
+    position: fixed; inset: 0; pointer-events: none;
+    z-index: 10; display: none;
+  }
+  #gameUI.active { display: block; }
+  #title {
+    position: absolute; top: 12px; left: 12px;
+    background: #FFE800; color: #000;
+    padding: 6px 14px; border: 4px solid #000;
+    border-radius: 12px; font-weight: bold; font-size: 14px;
+    box-shadow: 3px 3px 0 #000;
+  }
+  
+  /* Botão de música */
+  #musicBtn {
+    position: fixed; top: 12px; right: 12px;
+    width: 50px; height: 50px;
+    background: #FF2D95; color: #fff;
+    border: 4px solid #000; border-radius: 50%;
+    font-size: 22px; font-weight: bold;
+    box-shadow: 3px 3px 0 #000;
+    cursor: pointer; pointer-events: auto;
+    z-index: 15; display: flex;
+    align-items: center; justify-content: center;
+  }
+  #musicBtn.muted { background: #999; }
+  
+  /* Diálogo de NPC */
+  #dialogBox {
+    position: fixed;
+    bottom: 230px; left: 50%;
+    transform: translateX(-50%) translateY(30px);
+    max-width: 90%;
+    width: 500px;
+    background: #FFFFFF;
+    border: 6px solid #000;
+    border-radius: 20px;
+    padding: 14px 20px;
+    box-shadow: 6px 6px 0 #000;
+    z-index: 25;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+  }
+  #dialogBox.show {
+    display: block;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #dialogBox::before {
+    content: '';
+    position: absolute;
+    bottom: -14px; left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 14px solid #000;
+  }
+  #dialogBox::after {
+    content: '';
+    position: absolute;
+    bottom: -6px; left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 10px solid #FFFFFF;
+  }
+  #dialogText {
+    font-size: 15px;
+    font-weight: bold;
+    color: #000;
+    line-height: 1.4;
+    text-align: center;
+  }
+  #dialogText .speaker {
+    color: #FF2D95;
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+  
+  /* ============ CONTROLES ============ */
+  #controls {
+    position: fixed; inset: 0;
+    pointer-events: none; z-index: 20;
+    display: none;
+  }
+  #controls.active { display: block; }
+  
+  #joystick {
+    position: absolute; bottom: 30px; left: 30px;
+    width: 180px; height: 180px;
+    border: 6px solid #000; border-radius: 50%;
+    background: rgba(255, 232, 0, 0.55);
+    box-shadow: 5px 5px 0 #000;
+    pointer-events: auto; touch-action: none;
+  }
+  #joystickKnob {
+    position: absolute; top: 50%; left: 50%;
+    width: 80px; height: 80px;
+    margin: -40px 0 0 -40px;
+    background: #FF3B30; border: 5px solid #000;
+    border-radius: 50%;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.4);
+    pointer-events: none; transition: transform 0.05s linear;
+  }
+  #joystickHint {
+    position: absolute; bottom: -26px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px; font-weight: bold; color: #000;
+    white-space: nowrap;
+  }
+  #actionPanel {
+    position: absolute; bottom: 30px; right: 30px;
+    display: flex; flex-direction: column;
+    align-items: flex-end; gap: 16px;
+    pointer-events: auto;
+  }
+  .action-btn {
+    border: 6px solid #000; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #000; font-family: 'Arial Black', sans-serif;
+    font-weight: 900;
+    box-shadow: 5px 5px 0 #000;
+    transition: transform 0.05s;
+    user-select: none; touch-action: none;
+  }
+  .action-btn:active, .action-btn.pressed {
+    transform: translate(4px, 4px); box-shadow: 1px 1px 0 #000;
+  }
+  #btnRun { width: 130px; height: 130px; background: #FF9500; font-size: 22px; }
+  #btnRun.pressed { background: #FF3B30; color: #fff; }
+  #btnDance { width: 90px; height: 90px; background: #FF2D95; font-size: 40px; }
+  #btnJump { width: 90px; height: 90px; background: #34C759; font-size: 40px; }
+  
+  @media (orientation: landscape) and (max-height: 560px) {
+    #joystick { width: 140px; height: 140px; bottom: 20px; left: 20px; }
+    #joystickKnob { width: 62px; height: 62px; margin: -31px 0 0 -31px; }
+    #actionPanel { bottom: 20px; right: 20px; gap: 10px; }
+    #btnRun { width: 100px; height: 100px; font-size: 18px; }
+    #btnDance { width: 70px; height: 70px; font-size: 32px; }
+    #btnJump { width: 70px; height: 70px; font-size: 32px; }
+    #dialogBox { bottom: 180px; }
+  }
+  @media (max-width: 420px) {
+    #joystick { width: 150px; height: 150px; bottom: 20px; left: 20px; }
+    #joystickKnob { width: 68px; height: 68px; margin: -34px 0 0 -34px; }
+    #btnRun { width: 110px; height: 110px; font-size: 18px; }
+    #btnDance { width: 75px; height: 75px; font-size: 34px; }
+    #btnJump { width: 75px; height: 75px; font-size: 34px; }
+    #dialogBox { bottom: 200px; }
+    #dialogText { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
 
+<div id="startScreen">
+  <svg class="deco" style="top:5%;left:5%;width:70px;" viewBox="0 0 100 100">
+    <path d="M50 85 C20 55, 20 20, 50 35 C80 20, 80 55, 50 85 Z" 
+          fill="#FF3B30" stroke="#000" stroke-width="6" stroke-linejoin="round"/>
+  </svg>
+  <svg class="deco" style="top:8%;right:6%;width:80px;" viewBox="0 0 100 100">
+    <path d="M50 5 L62 38 L97 38 L68 58 L79 92 L50 72 L21 92 L32 58 L3 38 L38 38 Z"
+          fill="#FFE800" stroke="#000" stroke-width="6" stroke-linejoin="round"/>
+  </svg>
+  <svg class="deco" style="bottom:10%;left:8%;width:80px;" viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="40" fill="#007AFF" stroke="#000" stroke-width="6"/>
+    <path d="M35 45 Q50 60 65 45" stroke="#000" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <circle cx="38" cy="38" r="4" fill="#000"/>
+    <circle cx="62" cy="38" r="4" fill="#000"/>
+  </svg>
+  <svg class="deco" style="bottom:12%;right:8%;width:90px;" viewBox="0 0 100 100">
+    <path d="M50 90 L50 40 M50 40 L25 20 M50 40 L75 20 M50 40 L20 55 M50 40 L80 55 M50 60 L30 90 M50 60 L70 90"
+          stroke="#000" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <circle cx="50" cy="30" r="12" fill="#FF2D95" stroke="#000" stroke-width="6"/>
+  </svg>
+  
+  <div id="startContent">
+    <div class="title-main">CIDADE DE</div>
+    <div class="title-sub">KEITH HARING!</div>
+    <div class="credits-box">
+      <div class="label">✦ CRIADO POR ✦</div>
+      <div class="names">Manoel · Alesandra<br>Isabella · Ketellin</div>
+    </div>
+    <div class="assignment-badge">🎨 TRABALHO DE ARTE 🎨</div>
+    <button id="playBtn">JOGAR ▶</button>
+  </div>
+</div>
+
+<div id="gameUI">
+  <div id="title">✦ CIDADE DE KEITH HARING ✦</div>
+  <div id="musicBtn">♪</div>
+</div>
+
+<div id="dialogBox">
+  <div id="dialogText"></div>
+</div>
+
+<div id="controls">
+  <div id="joystick">
+    <div id="joystickKnob"></div>
+    <div id="joystickHint">ARRASTE PARA ANDAR</div>
+  </div>
+  <div id="actionPanel">
+    <div class="action-btn" id="btnDance">♪</div>
+    <div class="action-btn" id="btnJump">↑</div>
+    <div class="action-btn" id="btnRun">CORRER</div>
+  </div>
+</div>
+
+<canvas id="c"></canvas>
+
+<script>
+'use strict';
+
+// ==================== CANVAS ====================
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+resize();
+
+// ==================== HELPERS ====================
+const HARING_COLORS = [
+  '#FFE800','#FF3B30','#007AFF','#34C759',
+  '#FF2D95','#FF9500','#AF52DE','#00C7BE'
+];
+const BUILDING_COLORS = ['#FFE800','#FF3B30','#007AFF','#34C759','#FF2D95','#FF9500','#AF52DE','#00C7BE'];
+const rand = (a, b) => a + Math.random() * (b - a);
+const randInt = (a, b) => Math.floor(rand(a, b + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+function haringCircle(x, y, r, fill, lineW = 5) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (lineW > 0) { ctx.strokeStyle = '#000'; ctx.lineWidth = lineW; ctx.stroke(); }
+}
+function haringRect(x, y, w, h, fill, lineW = 5) {
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (lineW > 0) { ctx.strokeStyle = '#000'; ctx.lineWidth = lineW; ctx.stroke(); }
+}
+
+// ==================== MÚSICA PROCEDURAL (Web Audio API) ====================
+// Música alegre e animada no estilo "chip tune" - loop infinito
+let audioCtx = null;
+let musicPlaying = false;
+let musicGain = null;
+let musicTimer = null;
+
+const musicBtn = document.getElementById('musicBtn');
+
+// Escala pentatônica maior - sempre soa alegre!
+// Dó maior pentatônica: C D E G A
+const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00];
+
+function initAudio() {
+  if (audioCtx) return;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = 0.12;
+    musicGain.connect(audioCtx.destination);
+  } catch(e) { console.log('Audio n/suportado'); }
+}
+
+function playNote(freq, time, dur, type = 'square', vol = 1) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(0, time);
+  g.gain.linearRampToValueAtTime(0.3 * vol, time + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+  osc.connect(g);
+  g.connect(musicGain);
+  osc.start(time);
+  osc.stop(time + dur);
+}
+
+// Melodia alegre em loop
+let musicStep = 0;
+let musicNextTime = 0;
+const NOTE_DUR = 0.22; // ~136 BPM
+
+// Padrão de melodia (índices da escala) - alegre e dançante
+const melodyPattern = [
+  0, 2, 4, 2, 3, 4, 5, 4,  // frase A
+  5, 4, 3, 2, 4, 3, 2, 0,  // frase B
+  0, 4, 2, 5, 3, 4, 6, 5,  // frase C
+  4, 2, 3, 5, 4, 2, 0, -1  // frase D (com pausa no final)
+];
+
+// Padrão de baixo (notas graves)
+const bassPattern = [
+  0, -1, 3, -1, 0, -1, 3, -1,
+  2, -1, 5, -1, 2, -1, 5, -1,
+  3, -1, 5, -1, 3, -1, 5, -1,
+  2, -1, 5, -1, 0, -1, 3, -1
+];
+
+function scheduleMusic() {
+  if (!audioCtx || !musicPlaying) return;
+  const now = audioCtx.currentTime;
+  if (musicNextTime < now) musicNextTime = now + 0.1;
+  
+  while (musicNextTime < now + 0.5) {
+    const step = musicStep % 32;
+    
+    // Melodia
+    const mIdx = melodyPattern[step];
+    if (mIdx >= 0) {
+      const freq = scale[mIdx];
+      playNote(freq, musicNextTime, NOTE_DUR * 0.9, 'square', 0.7);
+      // Sobe uma oitava para brilho
+      playNote(freq * 2, musicNextTime, NOTE_DUR * 0.5, 'triangle', 0.3);
+    }
+    
+    // Baixo
+    const bIdx = bassPattern[step];
+    if (bIdx >= 0) {
+      const freq = scale[bIdx] / 2;
+      playNote(freq, musicNextTime, NOTE_DUR * 1.8, 'triangle', 0.9);
+    }
+    
+    // Percussão simples (ruído/nota bem curta)
+    if (step % 4 === 0) {
+      // Bumbo
+      playNote(80, musicNextTime, 0.08, 'sine', 1.2);
+    }
+    if (step % 4 === 2) {
+      // Caixa (som curto agudo)
+      playNote(1200, musicNextTime, 0.03, 'square', 0.4);
+    }
+    if (step % 8 === 4) {
+      // Hi-hat
+      playNote(3000, musicNextTime, 0.02, 'square', 0.15);
+    }
+    
+    musicNextTime += NOTE_DUR;
+    musicStep++;
+  }
+}
+
+function startMusic() {
+  initAudio();
+  if (!audioCtx) return;
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  musicPlaying = true;
+  musicNextTime = audioCtx.currentTime + 0.1;
+  if (musicTimer) clearInterval(musicTimer);
+  musicTimer = setInterval(scheduleMusic, 100);
+  scheduleMusic();
+  musicBtn.classList.remove('muted');
+  musicBtn.textContent = '♪';
+}
+
+function stopMusic() {
+  musicPlaying = false;
+  if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  musicBtn.classList.add('muted');
+  musicBtn.textContent = '✕';
+}
+
+musicBtn.addEventListener('click', () => {
+  if (musicPlaying) stopMusic();
+  else startMusic();
+});
+musicBtn.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (musicPlaying) stopMusic();
+  else startMusic();
+}, { passive: false });
+
+// ==================== MAPA ====================
+const GRID_COLS = 5;
+const GRID_ROWS = 5;
+const BLOCK_SIZE = 380;
+const ROAD_WIDTH = 120;
+const CELL_SIZE = BLOCK_SIZE + ROAD_WIDTH;
+const WORLD_SIZE = GRID_COLS * CELL_SIZE + ROAD_WIDTH;
+
+// O parque central ocupa 3x3 quarteirões
+const PARK_START_COL = 1;
+const PARK_START_ROW = 1;
+const PARK_END_COL = 3;
+const PARK_END_ROW = 3;
+
+function isInPark(col, row) {
+  return col >= PARK_START_COL && col <= PARK_END_COL &&
+         row >= PARK_START_ROW && row <= PARK_END_ROW;
+}
+
+function getBlockRect(col, row) {
+  return {
+    x: ROAD_WIDTH + col * CELL_SIZE,
+    y: ROAD_WIDTH + row * CELL_SIZE,
+    w: BLOCK_SIZE,
+    h: BLOCK_SIZE
+  };
+}
+function getBlockFullRect(col, row) {
+  return { x: col * CELL_SIZE, y: row * CELL_SIZE, w: CELL_SIZE, h: CELL_SIZE };
+}
+
+// ==================== CURIOSIDADES SOBRE KEITH HARING ====================
+const HARING_FACTS = [
+  "Keith Haring nasceu em 1958 na Pensilvânia, EUA!",
+  "Ele começou desenhando com giz na calçada quando criança!",
+  "Haring estudou na School of Visual Arts em Nova York!",
+  "Seus 'bebês radiantes' são sua marca registrada!",
+  "Ele desenhava no metrô de NY em espaços vazios de anúncios!",
+  "Fez mais de 50 murais públicos ao redor do mundo!",
+  "Trabalhou com Andy Warhol e Madonna!",
+  "Seu 'Crack is Wack' foi feito em um muro do Harlem em 1986!",
+  "Ele dizia: 'A arte é para todos'!",
+  "Seus cães e figuras dançantes são super famosos!",
+  "Fundou a Keith Haring Foundation em 1989!",
+  "Ele morreu jovem, aos 31 anos, em 1990.",
+  "Acreditava que a arte deveria estar nas ruas!",
+  "Fez capas de discos e camisetas icônicas!",
+  "Seu coração é um dos símbolos mais reconhecidos da arte pop!",
+  "Desenhava sem esboço, direto, com traço rápido!",
+  "Usava linhas grossas e cores fortes: sua assinatura!",
+  "Criou o 'Free South Africa' contra o apartheid!",
+  "Suas obras hoje valem milhões de dólares!",
+  "Keith amava crianças e desenhava com elas!",
+  "Em 1986 pintou o muro do hospital de NY em um dia!",
+  "Ele dizia que desenhar era como dançar no papel!",
+  "Suas figuras parecem se mover — sempre em ação!",
+  "O 'bebê radiante' representa esperança e pureza!",
+  "Keith Haring é um dos artistas pop mais amados do mundo!"
+];
+
+// ==================== HUMANOIDE ====================
+class Humanoid {
+  constructor(x, y, opts = {}) {
+    this.x = x; this.y = y;
+    this.color = opts.color || pick(HARING_COLORS);
+    this.skinColor = opts.skinColor || pick(['#FFE800','#FF9500','#FF3B30','#FFFFFF','#AF52DE']);
+    this.size = opts.size || rand(0.85, 1.15);
+    this.speed = opts.speed || rand(0.4, 1.2);
+    this.dir = opts.dir !== undefined ? opts.dir : rand(0, Math.PI * 2);
+    this.state = opts.state || 'walk';
+    this.stateTimer = rand(2, 6);
+    this.walkPhase = rand(0, Math.PI * 2);
+    this.wanderTimer = 0;
+    this.isTalking = false;
+    this.talkCooldown = 0;
+    // Cada NPC tem uma curiosidade fixa (para não ficar trocando)
+    this.fact = pick(HARING_FACTS);
+    this.pickNewTarget();
+  }
+  pickNewTarget() {
+    const range = 300;
+    this.targetX = Math.max(50, Math.min(WORLD_SIZE - 50, this.x + rand(-range, range)));
+    this.targetY = Math.max(50, Math.min(WORLD_SIZE - 50, this.y + rand(-range, range)));
+    this.wanderTimer = rand(3, 8);
+  }
+  update(dt) {
+    this.talkCooldown = Math.max(0, this.talkCooldown - dt);
+    
+    // Se está conversando, não anda
+    if (this.isTalking) {
+      this.walkPhase += dt * 2;
+      // Vira para o jogador
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      if (Math.hypot(dx, dy) > 1) {
+        this.dir = Math.atan2(dy, dx);
+      }
+      return;
+    }
+    
+    this.stateTimer -= dt;
+    this.wanderTimer -= dt;
+    if (this.stateTimer <= 0) {
+      const r = Math.random();
+      if (r < 0.65) this.state = 'walk';
+      else if (r < 0.78) this.state = 'idle';
+      else if (r < 0.88) this.state = 'dance';
+      else this.state = 'run';
+      this.stateTimer = rand(2, 5);
+    }
+    let spd = 0;
+    if (this.state === 'walk') spd = this.speed;
+    else if (this.state === 'run') spd = this.speed * 2.5;
+    if (spd > 0) {
+      if (this.wanderTimer <= 0) this.pickNewTarget();
+      const dx = this.targetX - this.x, dy = this.targetY - this.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 10) this.pickNewTarget();
+      else {
+        this.x += (dx / d) * spd * dt * 60;
+        this.y += (dy / d) * spd * dt * 60;
+        this.dir = Math.atan2(dy, dx);
+      }
+      this.walkPhase += dt * (this.state === 'run' ? 20 : 10);
+    } else this.walkPhase += dt * 3;
+    this.x = Math.max(30, Math.min(WORLD_SIZE - 30, this.x));
+    this.y = Math.max(30, Math.min(WORLD_SIZE - 30, this.y));
+  }
+  draw(camX, camY) {
+    const sx = this.x - camX, sy = this.y - camY;
+    if (sx < -150 || sx > W + 150 || sy < -150 || sy > H + 150) return;
+    const s = this.size;
+    const bob = Math.sin(this.walkPhase) * 1.5;
+    const legSwing = Math.sin(this.walkPhase) * 5;
+    const armSwing = Math.sin(this.walkPhase + Math.PI) * 5;
+    const headY = sy - 22 * s + bob;
+    const bodyY = sy - 8 * s + bob;
+    const legY = sy + 8 * s + bob;
+    const headR = 8 * s, torsoW = 12 * s, torsoH = 18 * s;
+    
+    if (!this.isTalking) {
+      if (this.state === 'run') {
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+        for (let i = 0; i < 3; i++) {
+          const off = 15 + i * 6;
+          const bx = sx - Math.cos(this.dir) * off;
+          const by = sy - Math.sin(this.dir) * off;
+          ctx.beginPath();
+          ctx.moveTo(bx - Math.sin(this.dir) * 5, by + Math.cos(this.dir) * 5);
+          ctx.lineTo(bx + Math.sin(this.dir) * 5, by - Math.cos(this.dir) * 5);
+          ctx.stroke();
+        }
+      } else if (this.state === 'walk') {
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+        const bx = sx - Math.cos(this.dir) * 12;
+        const by = sy - Math.sin(this.dir) * 12;
+        ctx.beginPath();
+        ctx.moveTo(bx - Math.sin(this.dir) * 4, by + Math.cos(this.dir) * 4);
+        ctx.lineTo(bx + Math.sin(this.dir) * 4, by - Math.cos(this.dir) * 4);
+        ctx.stroke();
+      }
+    }
+    
+    // Balãozinho de fala quando está perto
+    if (this.isTalking) {
+      // Símbolo ♪ ou ! acima
+      ctx.font = `${18 * s}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#FF2D95';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 3;
+      const bobY = Math.sin(performance.now() / 200) * 3;
+      ctx.strokeText('!', sx, headY - 20 + bobY);
+      ctx.fillText('!', sx, headY - 20 + bobY);
+    }
+    
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 5 * s; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(sx - 3 * s, bodyY + torsoH / 2);
+    ctx.lineTo(sx - 3 * s + (this.state === 'walk' || this.state === 'run' ? legSwing : 0), legY + 10 * s);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(sx + 3 * s, bodyY + torsoH / 2);
+    ctx.lineTo(sx + 3 * s - (this.state === 'walk' || this.state === 'run' ? legSwing : 0), legY + 10 * s);
+    ctx.stroke();
+    
+    let armRaise = 0;
+    if (this.state === 'dance') armRaise = -12 * s;
+    ctx.lineWidth = 4 * s;
+    ctx.beginPath();
+    ctx.moveTo(sx - torsoW / 2, bodyY - 2 * s);
+    ctx.lineTo(sx - torsoW / 2 - 8 * s, bodyY + 10 * s + armRaise + (this.state === 'walk' ? armSwing : 0));
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(sx + torsoW / 2, bodyY - 2 * s);
+    ctx.lineTo(sx + torsoW / 2 + 8 * s, bodyY + 10 * s + armRaise - (this.state === 'walk' ? armSwing : 0));
+    ctx.stroke();
+    
+    if (this.state === 'dance' && !this.isTalking) haringCircle(sx, bodyY + 2 * s, 9 * s, this.color, 4);
+    else haringRect(sx - torsoW / 2, bodyY - 4 * s, torsoW, torsoH, this.color, 4);
+    
+    haringCircle(sx, headY, headR, this.skinColor, 4);
+    
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2 * s;
+    ctx.beginPath();
+    const smileDir = Math.cos(this.dir) >= 0 ? 1 : -1;
+    ctx.arc(sx + smileDir * 2 * s, headY + 1, 3 * s, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+    
+    // Olhinhos
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(sx - 3 * s, headY - 2 * s, 1.5 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(sx + 3 * s, headY - 2 * s, 1.5 * s, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ==================== CARRO ====================
+class Car {
+  constructor(x, y, dir, color) {
+    this.x = x; this.y = y; this.dir = dir;
+    this.color = color; this.speed = rand(2.5, 4.5);
+  }
+  update(dt) {
+    this.x += Math.cos(this.dir) * this.speed * dt * 60;
+    this.y += Math.sin(this.dir) * this.speed * dt * 60;
+  }
+  draw(camX, camY) {
+    const sx = this.x - camX, sy = this.y - camY;
+    if (sx < -200 || sx > W + 200 || sy < -200 || sy > H + 200) return;
+    ctx.save();
+    ctx.translate(sx, sy); ctx.rotate(this.dir);
+    haringRect(-25, -12, 50, 24, this.color, 4);
+    haringRect(-10, -8, 20, 16, '#FFE800', 3);
+    haringCircle(-15, -14, 5, '#000', 2);
+    haringCircle(15, -14, 5, '#000', 2);
+    haringCircle(-15, 14, 5, '#000', 2);
+    haringCircle(15, 14, 5, '#000', 2);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    for (let i = 0; i < 3; i++) {
+      const ox = -30 - i * 8;
+      ctx.beginPath();
+      ctx.moveTo(ox, -6); ctx.lineTo(ox - 6, 0); ctx.lineTo(ox, 6);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ==================== CACHORRO ====================
+class Dog {
+  constructor(x, y, color) {
+    this.x = x; this.y = y; this.color = color;
+    this.dir = rand(0, Math.PI * 2);
+    this.speed = rand(0.8, 1.6);
+    this.t = rand(0, 10);
+    this.targetX = x; this.targetY = y;
+    this.timer = 0;
+  }
+  update(dt) {
+    this.t += dt;
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.timer = rand(2, 5);
+      this.targetX = Math.max(30, Math.min(WORLD_SIZE - 30, this.x + rand(-200, 200)));
+      this.targetY = Math.max(30, Math.min(WORLD_SIZE - 30, this.y + rand(-200, 200)));
+    }
+    const dx = this.targetX - this.x, dy = this.targetY - this.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 5) {
+      this.x += (dx / d) * this.speed * dt * 60;
+      this.y += (dy / d) * this.speed * dt * 60;
+      this.dir = Math.atan2(dy, dx);
+    }
+  }
+  draw(camX, camY) {
+    const sx = this.x - camX, sy = this.y - camY;
+    if (sx < -100 || sx > W + 100 || sy < -100 || sy > H + 100) return;
+    const bob = Math.sin(this.t * 8) * 2;
+    const legSwing = Math.sin(this.t * 10) * 3;
+    
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(this.dir);
+    
+    // corpo
+    haringRect(-14, -6 + bob * 0.3, 28, 12, this.color, 4);
+    // cabeça
+    haringCircle(16, -6 + bob * 0.3, 7, this.color, 3);
+    // orelhas
+    haringCircle(13, -13 + bob * 0.3, 3, this.color, 2);
+    haringCircle(19, -13 + bob * 0.3, 3, this.color, 2);
+    // focinho
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(22, -5 + bob * 0.3, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    // olho
+    ctx.beginPath();
+    ctx.arc(17, -8 + bob * 0.3, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // pernas
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-8, 6); ctx.lineTo(-8 + legSwing, 13);
+    ctx.moveTo(-2, 6); ctx.lineTo(-2 - legSwing, 13);
+    ctx.moveTo(6, 6); ctx.lineTo(6 + legSwing, 13);
+    ctx.moveTo(12, 6); ctx.lineTo(12 - legSwing, 13);
+    ctx.stroke();
+    
+    // rabo
+    ctx.beginPath();
+    ctx.moveTo(-14, -2);
+    ctx.lineTo(-20, -8 + Math.sin(this.t * 10) * 3);
+    ctx.stroke();
+    
+    ctx.restore();
+  }
+}
+
+// ==================== GATO ====================
+class Cat {
+  constructor(x, y, color) {
+    this.x = x; this.y = y; this.color = color;
+    this.dir = rand(0, Math.PI * 2);
+    this.speed = rand(0.5, 1.0);
+    this.t = rand(0, 10);
+    this.targetX = x; this.targetY = y;
+    this.timer = 0;
+  }
+  update(dt) {
+    this.t += dt;
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.timer = rand(3, 6);
+      this.targetX = Math.max(30, Math.min(WORLD_SIZE - 30, this.x + rand(-150, 150)));
+      this.targetY = Math.max(30, Math.min(WORLD_SIZE - 30, this.y + rand(-150, 150)));
+    }
+    const dx = this.targetX - this.x, dy = this.targetY - this.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 3) {
+      this.x += (dx / d) * this.speed * dt * 60;
+      this.y += (dy / d) * this.speed * dt * 60;
+      this.dir = Math.atan2(dy, dx);
+    }
+  }
+  draw(camX, camY) {
+    const sx = this.x - camX, sy = this.y - camY;
+    if (sx < -100 || sx > W + 100 || sy < -100 || sy > H + 100) return;
+    const bob = Math.sin(this.t * 5) * 1;
+    
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.rotate(this.dir);
+    
+    // corpo
+    haringRect(-10, -5 + bob * 0.3, 22, 10, this.color, 3);
+    // cabeça
+    haringCircle(13, -5 + bob * 0.3, 6, this.color, 3);
+    // orelhas triangulares
+    ctx.fillStyle = this.color;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(10, -10); ctx.lineTo(13, -16); ctx.lineTo(15, -10);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(14, -10); ctx.lineTo(17, -16); ctx.lineTo(19, -10);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // olho
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(15, -6 + bob * 0.3, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // patas
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-6, 5); ctx.lineTo(-6, 10);
+    ctx.moveTo(2, 5); ctx.lineTo(2, 10);
+    ctx.moveTo(8, 5); ctx.lineTo(8, 10);
+    ctx.stroke();
+    
+    // rabo
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-10, 0);
+    ctx.quadraticCurveTo(-18, -5 + Math.sin(this.t * 6) * 2, -20, 3);
+    ctx.stroke();
+    
+    ctx.restore();
+  }
+}
+
+// ==================== POMBA ====================
+class Pigeon {
+  constructor(x, y) {
+    this.x = x; this.y = y;
+    this.color = pick(['#A8A8A8', '#FFFFFF', '#B0B0B0']);
+    this.t = rand(0, 10);
+    // Voa em círculos
+    this.angle = rand(0, Math.PI * 2);
+    this.radius = rand(80, 200);
+    this.centerX = x; this.centerY = y;
+    this.speed = rand(0.3, 0.8);
+    this.flapPhase = rand(0, Math.PI * 2);
+  }
+  update(dt) {
+    this.t += dt;
+    this.angle += this.speed * dt;
+    this.flapPhase += dt * 15;
+    this.x = this.centerX + Math.cos(this.angle) * this.radius;
+    this.y = this.centerY + Math.sin(this.angle) * this.radius;
+  }
+  draw(camX, camY) {
+    const sx = this.x - camX, sy = this.y - camY;
+    if (sx < -100 || sx > W + 100 || sy < -100 || sy > H + 100) return;
+    const flap = Math.sin(this.flapPhase) * 4;
+    
+    // sombra no chão
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy + 40, 6, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // corpo
+    haringCircle(sx, sy, 5, this.color, 2);
+    // cabeça
+    haringCircle(sx + 4, sy - 2, 3, this.color, 2);
+    // bico
+    ctx.fillStyle = '#FF9500';
+    ctx.beginPath();
+    ctx.moveTo(sx + 6, sy - 2);
+    ctx.lineTo(sx + 9, sy - 1);
+    ctx.lineTo(sx + 6, sy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // asas
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(sx - 2, sy - flap, 6, 2.5, -0.3, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(sx + 2, sy - flap, 6, 2.5, 0.3, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+  }
+}
+
+// ==================== OBJETOS URBANOS ====================
+class CityObject {
+  constructor(type, x, y, opts = {}) {
+    this.type = type;
+    this.x = x; this.y = y;
+    this.opts = opts;
+    this.color = opts.color || pick(HARING_COLORS);
+    this.w = opts.w || 60;
+    this.h = opts.h || 60;
+    this.t = Math.random() * 10;
+    this.rot = opts.rot || 0;
+  }
+  update(dt) { this.t += dt; }
+  draw(camX, camY) {
+    const sx = this.x - camX, sy = this.y - camY;
+    if (sx < -400 || sx > W + 400 || sy < -400 || sy > H + 400) return;
+    switch (this.type) {
+      case 'building': this.drawBuilding(sx, sy); break;
+      case 'tree': this.drawTree(sx, sy); break;
+      case 'bench': this.drawBench(sx, sy); break;
+      case 'pole': this.drawPole(sx, sy); break;
+      case 'hydrant': this.drawHydrant(sx, sy); break;
+      case 'trash': this.drawTrash(sx, sy); break;
+      case 'symbol': this.drawSymbol(sx, sy); break;
+      case 'fountain': this.drawFountain(sx, sy); break;
+      case 'statue': this.drawStatue(sx, sy); break;
+      case 'bush': this.drawBush(sx, sy); break;
+      case 'flower': this.drawFlower(sx, sy); break;
+      case 'flowerbed': this.drawFlowerbed(sx, sy); break;
+      case 'pond': this.drawPond(sx, sy); break;
+      case 'duck': this.drawDuck(sx, sy); break;
+      case 'swing': this.drawSwing(sx, sy); break;
+    }
+  }
+  drawBuilding(sx, sy) {
+    const w = this.w, h = this.h;
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(sx - w/2 + 10, sy - h/2 + 10, w, h);
+    haringRect(sx - w/2, sy - h/2, w, h, this.color, 6);
+    const roofH = Math.min(20, h * 0.12);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(sx - w/2, sy - h/2, w, roofH);
+    
+    const winSize = 22, winGapX = 14, winGapY = 14;
+    const paddingX = 18, paddingTop = 30, paddingBottom = 18;
+    const availW = w - paddingX * 2;
+    const availH = h - paddingTop - paddingBottom;
+    const cols = Math.max(1, Math.floor((availW + winGapX) / (winSize + winGapX)));
+    const rows = Math.max(1, Math.floor((availH + winGapY) / (winSize + winGapY)));
+    const totalW = cols * winSize + (cols - 1) * winGapX;
+    const totalH = rows * winSize + (rows - 1) * winGapY;
+    const startX = sx - totalW / 2;
+    const startY = sy - h/2 + paddingTop + (availH - totalH) / 2;
+    const winColor = this.opts.winColor || '#FFE800';
+    
+    for (let i = 0; i < cols; i++) {
+      for (let j = 0; j < rows; j++) {
+        const wx = startX + i * (winSize + winGapX);
+        const wy = startY + j * (winSize + winGapY);
+        haringRect(wx, wy, winSize, winSize, winColor, 3);
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(wx + winSize/2, wy);
+        ctx.lineTo(wx + winSize/2, wy + winSize);
+        ctx.moveTo(wx, wy + winSize/2);
+        ctx.lineTo(wx + winSize, wy + winSize/2);
+        ctx.stroke();
+      }
+    }
+    const doorW = 26, doorH = 34;
+    haringRect(sx - doorW/2, sy + h/2 - doorH, doorW, doorH, '#000', 4);
+    
+    if (this.opts.hasAntenna) {
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - h/2);
+      ctx.lineTo(sx, sy - h/2 - 30);
+      ctx.stroke();
+      haringCircle(sx, sy - h/2 - 34, 6, '#FF3B30', 3);
+    }
+    if (this.opts.hasChimney) {
+      haringRect(sx - w/2 + 15, sy - h/2 - 20, 20, 20, this.color, 4);
+    }
+  }
+  drawTree(sx, sy) {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 4, sy + 22, 18, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(sx, sy + 20);
+    ctx.lineTo(sx, sy);
+    ctx.stroke();
+    const r = 22 + Math.sin(this.t * 2) * 1.5;
+    haringCircle(sx, sy - 8, r, this.color, 5);
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(sx - 8, sy - 14, 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(sx + 8, sy - 4, 5, 0, Math.PI * 2); ctx.stroke();
+  }
+  drawBench(sx, sy) {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.fillRect(sx - 25 + 4, sy - 5 + 4, 50, 12);
+    haringRect(sx - 25, sy - 5, 50, 12, this.color, 4);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(sx - 20, sy + 7); ctx.lineTo(sx - 20, sy + 18);
+    ctx.moveTo(sx + 20, sy + 7); ctx.lineTo(sx + 20, sy + 18);
+    ctx.stroke();
+  }
+  drawPole(sx, sy) {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 4, sy + 22, 8, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy + 20);
+    ctx.lineTo(sx, sy - 30);
+    ctx.stroke();
+    haringCircle(sx, sy - 32, 6, this.color, 3);
+    ctx.fillStyle = '#FFE800';
+    ctx.beginPath(); ctx.arc(sx, sy - 32, 3, 0, Math.PI * 2); ctx.fill();
+  }
+  drawHydrant(sx, sy) {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 3, sy + 12, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    haringRect(sx - 8, sy - 12, 16, 24, '#FF3B30', 4);
+    haringCircle(sx, sy - 14, 9, '#FF3B30', 4);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(sx - 12, sy - 4); ctx.lineTo(sx + 12, sy - 4);
+    ctx.stroke();
+  }
+  drawTrash(sx, sy) {
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath();
+    ctx.ellipse(sx + 3, sy + 15, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    haringRect(sx - 12, sy - 15, 24, 30, this.color, 4);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(sx - 8, sy - 5); ctx.lineTo(sx + 8, sy - 5);
+    ctx.moveTo(sx - 8, sy + 3); ctx.lineTo(sx + 8, sy + 3);
+    ctx.stroke();
+  }
+  drawSymbol(sx, sy) {
+    const type = this.opts.symbol;
+    const bob = Math.sin(this.t * 2) * 2;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+    if (type === 'heart') {
+      ctx.beginPath();
+      ctx.moveTo(sx, sy + 8 + bob);
+      ctx.bezierCurveTo(sx - 12, sy - 4 + bob, sx - 6, sy - 14 + bob, sx, sy - 6 + bob);
+      ctx.bezierCurveTo(sx + 6, sy - 14 + bob, sx + 12, sy - 4 + bob, sx, sy + 8 + bob);
+      ctx.fillStyle = this.color; ctx.fill(); ctx.stroke();
+    } else if (type === 'star') {
+      ctx.beginPath();
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI/2 + i * Math.PI * 2 / 5;
+        const a2 = a + Math.PI / 5;
+        ctx.lineTo(sx + Math.cos(a) * 12, sy + Math.sin(a) * 12 + bob);
+        ctx.lineTo(sx + Math.cos(a2) * 5, sy + Math.sin(a2) * 5 + bob);
+      }
+      ctx.closePath(); ctx.fillStyle = this.color; ctx.fill(); ctx.stroke();
+    } else if (type === 'spiral') {
+      ctx.beginPath();
+      for (let i = 0; i < 40; i++) {
+        const a = i * 0.4 + this.t;
+        const r = i * 0.5;
+        ctx.lineTo(sx + Math.cos(a) * r, sy + Math.sin(a) * r + bob);
+      }
+      ctx.strokeStyle = this.color; ctx.lineWidth = 4; ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(sx - 10, sy - 10 + bob); ctx.lineTo(sx + 10, sy + 10 + bob);
+      ctx.moveTo(sx + 10, sy - 10 + bob); ctx.lineTo(sx - 10, sy + 10 + bob);
+      ctx.strokeStyle = this.color; ctx.lineWidth = 5; ctx.stroke();
+    }
+  }
+  drawFountain(sx, sy) {
+    haringCircle(sx, sy, 70, '#007AFF', 6);
+    haringCircle(sx, sy, 55, '#FFFFFF', 4);
+    const t = this.t;
+    ctx.fillStyle = '#007AFF';
+    for (let i = 0; i < 8; i++) {
+      const a = t * 0.5 + i * Math.PI / 4;
+      const r = 32 + Math.sin(t * 2 + i) * 8;
+      const px = sx + Math.cos(a) * r;
+      const py = sy + Math.sin(a) * r;
+      ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.stroke();
+    }
+    haringCircle(sx, sy, 18, '#FFE800', 4);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    for (let i = 0; i < 6; i++) {
+      const a = t * 0.8 + i * Math.PI / 3;
+      const jx = sx + Math.cos(a) * 20;
+      const jy = sy + Math.sin(a) * 20;
+      ctx.beginPath();
+      ctx.moveTo(jx, jy);
+      ctx.lineTo(jx + Math.cos(a) * 15, jy + Math.sin(a) * 15 - 15);
+      ctx.stroke();
+    }
+  }
+  drawStatue(sx, sy) {
+    haringRect(sx - 25, sy + 15, 50, 18, '#AF52DE', 4);
+    haringRect(sx - 20, sy - 5, 40, 25, '#AF52DE', 4);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - 5); ctx.lineTo(sx, sy - 45); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(sx, sy - 40); ctx.lineTo(sx - 25, sy - 55);
+    ctx.moveTo(sx, sy - 40); ctx.lineTo(sx + 25, sy - 55);
+    ctx.stroke();
+    haringCircle(sx, sy - 55, 12, '#FFE800', 5);
+    ctx.beginPath();
+    ctx.moveTo(sx, sy + 10); ctx.lineTo(sx - 12, sy + 20);
+    ctx.moveTo(sx, sy + 10); ctx.lineTo(sx + 12, sy + 20);
+    ctx.stroke();
+    // olhinhos
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(sx - 4, sy - 58, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + 4, sy - 58, 2, 0, Math.PI * 2); ctx.fill();
+    // sorriso
+    ctx.beginPath();
+    ctx.arc(sx, sy - 52, 5, 0.2, Math.PI - 0.2);
+    ctx.lineWidth = 2; ctx.stroke();
+  }
+  drawBush(sx, sy) {
+    const r = 14 + Math.sin(this.t * 3) * 1;
+    haringCircle(sx - 10, sy, r, this.color, 4);
+    haringCircle(sx + 10, sy, r, this.color, 4);
+    haringCircle(sx, sy - 8, r, this.color, 4);
+  }
+  drawFlower(sx, sy) {
+    const bob = Math.sin(this.t * 3) * 1.5;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy + 15); ctx.lineTo(sx, sy + bob);
+    ctx.stroke();
+    for (let i = 0; i < 5; i++) {
+      const a = i * Math.PI * 2 / 5;
+      haringCircle(sx + Math.cos(a) * 7, sy + Math.sin(a) * 7 + bob, 5, this.color, 2);
+    }
+    haringCircle(sx, sy + bob, 4, '#FFE800', 2);
+  }
+  drawFlowerbed(sx, sy) {
+    // canteiro oval com flores
+    ctx.save();
+    ctx.translate(sx, sy);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.w / 2, this.h / 2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#8B6F47';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    // flores dentro
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI * 2 / 8 + this.t * 0.1;
+      const r = Math.min(this.w, this.h) * 0.28;
+      const px = Math.cos(a) * r;
+      const py = Math.sin(a) * r * 0.6;
+      const bob = Math.sin(this.t * 3 + i) * 1.5;
+      for (let k = 0; k < 4; k++) {
+        const fa = k * Math.PI / 2;
+        haringCircle(px + Math.cos(fa) * 4, py + Math.sin(fa) * 4 + bob, 3.5,
+          pick(['#FF2D95', '#FF3B30', '#FFE800', '#AF52DE']), 1.5);
+      }
+      haringCircle(px, py + bob, 2.5, '#FFE800', 1.5);
+    }
+    ctx.restore();
+  }
+  drawPond(sx, sy) {
+    ctx.save();
+    ctx.translate(sx, sy);
+    // lagoa
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.w / 2, this.h / 2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#4FC3F7';
+    ctx.fill();
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    // ondulações animadas
+    ctx.strokeStyle = '#007AFF';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      const phase = (this.t * 0.5 + i * 0.4) % 1;
+      const rr = phase * Math.min(this.w, this.h) * 0.4;
+      ctx.globalAlpha = 1 - phase;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rr, rr * 0.5, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+  drawDuck(sx, sy) {
+    const bob = Math.sin(this.t * 3) * 2;
+    // corpo (na água)
+    haringCircle(sx, sy + bob, 10, '#FFE800', 3);
+    // cabeça
+    haringCircle(sx + 8, sy - 6 + bob, 6, '#FFE800', 3);
+    // bico
+    ctx.fillStyle = '#FF9500';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(sx + 13, sy - 6 + bob);
+    ctx.lineTo(sx + 20, sy - 5 + bob);
+    ctx.lineTo(sx + 13, sy - 4 + bob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // olho
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(sx + 9, sy - 8 + bob, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  drawSwing(sx, sy) {
+    // balanço (brinquedo de parque)
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 5;
+    // estrutura A
+    ctx.beginPath();
+    ctx.moveTo(sx - 40, sy + 25);
+    ctx.lineTo(sx - 20, sy - 25);
+    ctx.lineTo(sx, sy + 25);
+    ctx.moveTo(sx, sy + 25);
+    ctx.lineTo(sx + 20, sy - 25);
+    ctx.lineTo(sx + 40, sy + 25);
+    ctx.stroke();
+    // barra superior
+    ctx.beginPath();
+    ctx.moveTo(sx - 20, sy - 25);
+    ctx.lineTo(sx + 20, sy - 25);
+    ctx.stroke();
+    // balanço pendurado
+    const swingAngle = Math.sin(this.t * 2) * 0.3;
+    const p1x = sx - 20 + Math.sin(swingAngle) * 20;
+    const p1y = sy - 25 + Math.cos(swingAngle) * 30;
+    ctx.beginPath();
+    ctx.moveTo(sx - 20, sy - 25);
+    ctx.lineTo(p1x, p1y);
+    ctx.moveTo(sx + 20, sy - 25);
+    ctx.lineTo(p1x + 15, p1y);
+    ctx.stroke();
+    // assento
+    haringRect(p1x - 10, p1y, 25, 5, '#FF3B30', 3);
+  }
+}
+
+// ==================== GERADOR DE QUARTEIRÃO (6 prédios) ====================
+function generateBlock(col, row) {
+  const rect = getBlockRect(col, row);
+  const objects = [];
+  
+  // Layout fixo: 2 fileiras × 3 colunas = 6 prédios
+  const cols = 3;
+  const rows = 2;
+  const pad = 18;
+  const slotW = (rect.w - pad * (cols + 1)) / cols;
+  const slotD = (rect.h - pad * (rows + 1)) / rows;
+  
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      const bw = slotW * rand(0.85, 0.95);
+      const bd = slotD * rand(0.85, 0.95);
+      const bx = rect.x + pad + i * (slotW + pad) + slotW / 2;
+      const by = rect.y + pad + j * (slotD + pad) + slotD / 2;
+      
+      objects.push(new CityObject('building', bx, by, {
+        w: bw, h: bd,
+        color: pick(BUILDING_COLORS),
+        winColor: pick(['#FFE800', '#FFFFFF', '#007AFF']),
+        hasAntenna: Math.random() < 0.2,
+        hasChimney: Math.random() < 0.25
+      }));
+    }
+  }
+  
+  // Postes de luz nos 4 cantos do quarteirão (calçada)
+  const corners = [
+    { x: rect.x - 25, y: rect.y - 25 },
+    { x: rect.x + rect.w + 25, y: rect.y - 25 },
+    { x: rect.x - 25, y: rect.y + rect.h + 25 },
+    { x: rect.x + rect.w + 25, y: rect.y + rect.h + 25 }
+  ];
+  for (const c of corners) {
+    if (Math.random() < 0.7) {
+      objects.push(new CityObject('pole', c.x, c.y, { color: '#FFE800' }));
+    }
+  }
+  
+  // Árvores na calçada
+  if (Math.random() < 0.5) {
+    objects.push(new CityObject('tree', 
+      rect.x + rect.w + 25, rect.y + rect.h * 0.5, { color: '#34C759' }));
+  }
+  
+  return objects;
+}
+
+// ==================== PARQUE CENTRAL ====================
+function generatePark() {
+  const objects = [];
+  
+  // Bounds do parque (3x3 quarteirões)
+  const parkX = PARK_START_COL * CELL_SIZE;
+  const parkY = PARK_START_ROW * CELL_SIZE;
+  const parkW = (PARK_END_COL - PARK_START_COL + 1) * CELL_SIZE - ROAD_WIDTH;
+  const parkH = (PARK_END_ROW - PARK_START_ROW + 1) * CELL_SIZE - ROAD_WIDTH;
+  const cx = parkX + parkW / 2;
+  const cy = parkY + parkH / 2;
+  
+  // Fonte central grande
+  objects.push(new CityObject('fountain', cx, cy));
+  
+  // Estátua do Keith Haring ao lado da fonte
+  objects.push(new CityObject('statue', cx - 130, cy - 60));
+  
+  // Lagoa
+  objects.push(new CityObject('pond', cx + 130, cy + 100, { w: 180, h: 110 }));
+  
+  // Patinhos na lagoa
+  for (let i = 0; i < 4; i++) {
+    const a = rand(0, Math.PI * 2);
+    const r = rand(10, 60);
+    objects.push(new CityObject('duck', cx + 130 + Math.cos(a) * r, cy + 100 + Math.sin(a) * r * 0.5));
+  }
+  
+  // Balanço (playground)
+  objects.push(new CityObject('swing', cx - 130, cy + 140));
+  
+  // Árvores pelos cantos do parque
+  const treePositions = [
+    { x: parkX + 60, y: parkY + 60 },
+    { x: parkX + parkW - 60, y: parkY + 60 },
+    { x: parkX + 60, y: parkY + parkH - 60 },
+    { x: parkX + parkW - 60, y: parkY + parkH - 60 },
+    { x: cx - 200, y: cy - 180 },
+    { x: cx + 200, y: cy - 180 },
+    { x: cx - 200, y: cy + 200 },
+    { x: cx + 200, y: cy + 200 }
+  ];
+  for (const t of treePositions) {
+    objects.push(new CityObject('tree', t.x, t.y, {
+      color: pick(['#34C759', '#00C7BE', '#AF52DE', '#FF2D95'])
+    }));
+  }
+  
+  // Bancos ao redor da fonte
+  for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4;
+    const r = 110;
+    objects.push(new CityObject('bench',
+      cx + Math.cos(a) * r, cy + Math.sin(a) * r,
+      { color: pick(['#FF9500', '#FF2D95']) }));
+  }
+  
+  // Canteiros de flores
+  objects.push(new CityObject('flowerbed', cx - 130, cy - 60, { w: 100, h: 70 }));
+  objects.push(new CityObject('flowerbed', cx + 130, cy - 100, { w: 120, h: 80 }));
+  objects.push(new CityObject('flowerbed', cx - 100, cy + 130, { w: 90, h: 70 }));
+  objects.push(new CityObject('flowerbed', cx + 50, cy - 200, { w: 110, h: 70 }));
+  
+  // Arbustos nas bordas do parque
+  for (let i = 0; i < 16; i++) {
+    const a = i * Math.PI * 2 / 16;
+    const rx = parkW * 0.45;
+    const ry = parkH * 0.45;
+    const bx = cx + Math.cos(a) * rx;
+    const by = cy + Math.sin(a) * ry;
+    objects.push(new CityObject('bush', bx, by, {
+      color: pick(['#34C759', '#00C7BE'])
+    }));
+  }
+  
+  // Muitas flores espalhadas pelo parque
+  for (let i = 0; i < 40; i++) {
+    const fx = rand(parkX + 40, parkX + parkW - 40);
+    const fy = rand(parkY + 40, parkY + parkH - 40);
+    objects.push(new CityObject('flower', fx, fy, {
+      color: pick(['#FF2D95', '#FF3B30', '#FFE800', '#AF52DE'])
+    }));
+  }
+  
+  // Símbolos Haring decorativos
+  objects.push(new CityObject('symbol', cx - 200, cy + 50,
+    { color: '#FF2D95', symbol: 'heart' }));
+  objects.push(new CityObject('symbol', cx + 200, cy - 50,
+    { color: '#FFE800', symbol: 'star' }));
+  objects.push(new CityObject('symbol', cx, cy + 220,
+    { color: '#007AFF', symbol: 'spiral' }));
+  
+  return { objects, bounds: { x: parkX, y: parkY, w: parkW, h: parkH } };
+}
+
+// ==================== MUNDO ====================
+const cityObjects = [];
+const humans = [];
+const cars = [];
+const dogs = [];
+const cats = [];
+const pigeons = [];
+let parkBounds = null;
+
+function buildCity() {
+  // Gera quarteirões (exceto os do parque)
+  for (let col = 0; col < GRID_COLS; col++) {
+    for (let row = 0; row < GRID_ROWS; row++) {
+      if (isInPark(col, row)) continue;
+      const blockObjects = generateBlock(col, row);
+      cityObjects.push(...blockObjects);
+    }
+  }
+  
+  // Gera o parque central
+  const park = generatePark();
+  cityObjects.push(...park.objects);
+  parkBounds = park.bounds;
+  
+  // Habitantes - alguns no parque, alguns nos quarteirões, alguns nas ruas
+  for (let i = 0; i < 80; i++) {
+    let x, y;
+    const r = Math.random();
+    if (r < 0.4 && parkBounds) {
+      // No parque
+      x = rand(parkBounds.x + 40, parkBounds.x + parkBounds.w - 40);
+      y = rand(parkBounds.y + 40, parkBounds.y + parkBounds.h - 40);
+    } else if (r < 0.7) {
+      // Nas ruas
+      const col = randInt(0, GRID_COLS);
+      const row = randInt(0, GRID_ROWS);
+      x = col * CELL_SIZE + CELL_SIZE / 2 + rand(-ROAD_WIDTH/2, ROAD_WIDTH/2);
+      y = row * CELL_SIZE + CELL_SIZE / 2 + rand(-ROAD_WIDTH/2, ROAD_WIDTH/2);
+    } else {
+      // Espalhados pela cidade
+      x = rand(100, WORLD_SIZE - 100);
+      y = rand(100, WORLD_SIZE - 100);
+    }
+    humans.push(new Humanoid(
+      Math.max(50, Math.min(WORLD_SIZE - 50, x)),
+      Math.max(50, Math.min(WORLD_SIZE - 50, y))
+    ));
+  }
+  
+  // Cachorros - mais no parque
+  for (let i = 0; i < 12; i++) {
+    let x, y;
+    if (Math.random() < 0.6 && parkBounds) {
+      x = rand(parkBounds.x + 30, parkBounds.x + parkBounds.w - 30);
+      y = rand(parkBounds.y + 30, parkBounds.y + parkBounds.h - 30);
+    } else {
+      x = rand(100, WORLD_SIZE - 100);
+      y = rand(100, WORLD_SIZE - 100);
+    }
+    dogs.push(new Dog(x, y, pick(HARING_COLORS)));
+  }
+  
+  // Gatos
+  for (let i = 0; i < 10; i++) {
+    let x, y;
+    if (Math.random() < 0.5 && parkBounds) {
+      x = rand(parkBounds.x + 30, parkBounds.x + parkBounds.w - 30);
+      y = rand(parkBounds.y + 30, parkBounds.y + parkBounds.h - 30);
+    } else {
+      x = rand(100, WORLD_SIZE - 100);
+      y = rand(100, WORLD_SIZE - 100);
+    }
+    cats.push(new Cat(x, y, pick(['#000000', '#FFFFFF', '#FF9500', '#FF3B30', '#A8A8A8'])));
+  }
+  
+  // Pombas - mais no parque e nas praças
+  for (let i = 0; i < 15; i++) {
+    let x, y;
+    if (Math.random() < 0.7 && parkBounds) {
+      x = rand(parkBounds.x + 50, parkBounds.x + parkBounds.w - 50);
+      y = rand(parkBounds.y + 50, parkBounds.y + parkBounds.h - 50);
+    } else {
+      x = rand(200, WORLD_SIZE - 200);
+      y = rand(200, WORLD_SIZE - 200);
+    }
+    pigeons.push(new Pigeon(x, y));
+  }
+  
+  // Símbolos Haring nas ruas
+  for (let i = 0; i < 20; i++) {
+    const x = rand(100, WORLD_SIZE - 100);
+    const y = rand(100, WORLD_SIZE - 100);
+    cityObjects.push(new CityObject('symbol', x, y,
+      { color: pick(HARING_COLORS), symbol: pick(['heart','star','spiral','cross']) }));
+  }
+}
+buildCity();
+
+// ==================== JOGADOR ====================
+const player = {
+  x: WORLD_SIZE / 2, y: WORLD_SIZE / 2 + 400, // começando perto do parque
+  speed: 3.2, dir: 0, walkPhase: 0,
+  color: '#FF3B30', skinColor: '#FFE800',
+  jumpOffset: 0, jumpVel: 0, jumping: false,
+  danceTimer: 0, running: false
+};
+
+let camX = player.x - W / 2;
+let camY = player.y - H / 2;
+
+// ==================== SISTEMA DE DIÁLOGO ====================
+const dialogBox = document.getElementById('dialogBox');
+const dialogText = document.getElementById('dialogText');
+let currentTalkingNPC = null;
+let dialogHideTimer = null;
+const TALK_DISTANCE = 90; // ~3 metros
+
+function checkNPCInteraction() {
+  let nearest = null;
+  let nearestDist = TALK_DISTANCE;
+  
+  for (const h of humans) {
+    const d = Math.hypot(h.x - player.x, h.y - player.y);
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearest = h;
+    }
+  }
+  
+  // Se mudou de NPC
+  if (nearest !== currentTalkingNPC) {
+    if (currentTalkingNPC) {
+      currentTalkingNPC.isTalking = false;
+    }
+    currentTalkingNPC = nearest;
+    if (currentTalkingNPC) {
+      currentTalkingNPC.isTalking = true;
+      // Mostra o diálogo
+      dialogText.innerHTML = `<span class="speaker">💬 CURIOSIDADE!</span>${currentTalkingNPC.fact}`;
+      dialogBox.classList.add('show');
+      if (dialogHideTimer) clearTimeout(dialogHideTimer);
+    } else {
+      dialogBox.classList.remove('show');
+    }
+  }
+}
+
+// ==================== EVENTOS ALEATÓRIOS ====================
+let eventTimer = 5;
+function spawnRandomEvent() {
+  const r = Math.random();
+  const side = Math.floor(Math.random() * 4);
+  let x, y, dir;
+  const camCenterX = camX + W / 2, camCenterY = camY + H / 2;
+  if (side === 0) { x = camCenterX - W/2 - 100; y = camCenterY + rand(-200, 200); dir = 0; }
+  else if (side === 1) { x = camCenterX + W/2 + 100; y = camCenterY + rand(-200, 200); dir = Math.PI; }
+  else if (side === 2) { x = camCenterX + rand(-200, 200); y = camCenterY - H/2 - 100; dir = Math.PI/2; }
+  else { x = camCenterX + rand(-200, 200); y = camCenterY + H/2 + 100; dir = -Math.PI/2; }
+  
+  if (r < 0.4) {
+    const count = randInt(3, 6);
+    const baseDir = rand(0, Math.PI * 2);
+    for (let i = 0; i < count; i++) {
+      const h = new Humanoid(x + rand(-30, 30), y + rand(-30, 30), { state: 'walk', speed: rand(0.8, 1.3) });
+      h.dir = baseDir;
+      h.targetX = h.x + Math.cos(baseDir) * 400;
+      h.targetY = h.y + Math.sin(baseDir) * 400;
+      h.wanderTimer = 10;
+      humans.push(h);
+    }
+  } else if (r < 0.65) {
+    for (let i = 0; i < randInt(2, 4); i++) {
+      const h = new Humanoid(x + rand(-40, 40), y + rand(-40, 40), { state: 'dance' });
+      h.stateTimer = rand(6, 12);
+      humans.push(h);
+    }
+  } else if (r < 0.85) {
+    cars.push(new Car(x, y, dir, pick(HARING_COLORS)));
+  }
+}
+
+// ==================== INPUT ====================
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
+});
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+function pollGamepad() {
+  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let gp = null;
+  for (const g of gamepads) if (g) { gp = g; break; }
+  if (!gp) return { dx: 0, dy: 0, jump: false, dance: false, run: false };
+  const deadzone = 0.25;
+  let dx = gp.axes[0] || 0;
+  let dy = gp.axes[1] || 0;
+  if (Math.abs(dx) < deadzone) dx = 0;
+  if (Math.abs(dy) < deadzone) dy = 0;
+  if (gp.buttons[12] && gp.buttons[12].pressed) dy = -1;
+  if (gp.buttons[13] && gp.buttons[13].pressed) dy = 1;
+  if (gp.buttons[14] && gp.buttons[14].pressed) dx = -1;
+  if (gp.buttons[15] && gp.buttons[15].pressed) dx = 1;
+  return {
+    dx, dy,
+    jump: gp.buttons[0] && gp.buttons[0].pressed,
+    dance: gp.buttons[2] && gp.buttons[2].pressed,
+    run: (gp.buttons[1] && gp.buttons[1].pressed) || (gp.buttons[7] && gp.buttons[7].pressed)
+  };
+}
+
+const joystickEl = document.getElementById('joystick');
+const joystickKnob = document.getElementById('joystickKnob');
+let joystickActive = false, joystickId = null;
+let joystickVec = { x: 0, y: 0 };
+let joystickCenter = { x: 0, y: 0 };
+const JOY_MAX = 55;
+
+function startJoystick(clientX, clientY) {
+  const rect = joystickEl.getBoundingClientRect();
+  joystickCenter.x = rect.left + rect.width / 2;
+  joystickCenter.y = rect.top + rect.height / 2;
+  joystickActive = true;
+  updateJoystick(clientX, clientY);
+}
+function updateJoystick(clientX, clientY) {
+  if (!joystickActive) return;
+  let dx = clientX - joystickCenter.x;
+  let dy = clientY - joystickCenter.y;
+  const len = Math.hypot(dx, dy);
+  if (len > JOY_MAX) { dx = dx / len * JOY_MAX; dy = dy / len * JOY_MAX; }
+  joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+  const nlen = Math.hypot(dx, dy);
+  if (nlen < 8) { joystickVec.x = 0; joystickVec.y = 0; return; }
+  joystickVec.x = dx / JOY_MAX;
+  joystickVec.y = dy / JOY_MAX;
+}
+function endJoystick() {
+  joystickActive = false;
+  joystickId = null;
+  joystickVec.x = 0; joystickVec.y = 0;
+  joystickKnob.style.transform = `translate(0px, 0px)`;
+}
+joystickEl.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.changedTouches[0];
+  joystickId = t.identifier;
+  startJoystick(t.clientX, t.clientY);
+}, { passive: false });
+joystickEl.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joystickId) updateJoystick(t.clientX, t.clientY);
+  }
+}, { passive: false });
+joystickEl.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joystickId) endJoystick();
+  }
+}, { passive: false });
+joystickEl.addEventListener('touchcancel', endJoystick);
+joystickEl.addEventListener('mousedown', e => { e.preventDefault(); startJoystick(e.clientX, e.clientY); });
+window.addEventListener('mousemove', e => { if (joystickActive) updateJoystick(e.clientX, e.clientY); });
+window.addEventListener('mouseup', () => { if (joystickActive) endJoystick(); });
+
+const btnRun = document.getElementById('btnRun');
+const btnJump = document.getElementById('btnJump');
+const btnDance = document.getElementById('btnDance');
+let runPressed = false, jumpPressed = false, dancePressed = false;
+
+function bindHold(el, onDown, onUp) {
+  el.addEventListener('touchstart', e => { e.preventDefault(); el.classList.add('pressed'); onDown(); }, { passive: false });
+  el.addEventListener('touchend', e => { e.preventDefault(); el.classList.remove('pressed'); onUp(); });
+  el.addEventListener('touchcancel', () => { el.classList.remove('pressed'); onUp(); });
+  el.addEventListener('mousedown', e => { e.preventDefault(); el.classList.add('pressed'); onDown(); });
+  el.addEventListener('mouseup', () => { el.classList.remove('pressed'); onUp(); });
+  el.addEventListener('mouseleave', () => { el.classList.remove('pressed'); onUp(); });
+}
+bindHold(btnRun, () => runPressed = true, () => runPressed = false);
+bindHold(btnJump, () => jumpPressed = true, () => jumpPressed = false);
+bindHold(btnDance, () => dancePressed = true, () => dancePressed = false);
+
+// ==================== TELA INICIAL ====================
+const startScreen = document.getElementById('startScreen');
+const gameUI = document.getElementById('gameUI');
+const controlsEl = document.getElementById('controls');
+const playBtn = document.getElementById('playBtn');
+let gameStarted = false;
+
+playBtn.addEventListener('click', startGame);
+playBtn.addEventListener('touchstart', e => { e.preventDefault(); startGame(); }, { passive: false });
+
+function startGame() {
+  if (gameStarted) return;
+  gameStarted = true;
+  startScreen.classList.add('hidden');
+  setTimeout(() => startScreen.style.display = 'none', 600);
+  gameUI.classList.add('active');
+  controlsEl.classList.add('active');
+  // Inicia música
+  startMusic();
+}
+
+// ==================== UPDATE ====================
+function update(dt) {
+  if (!gameStarted) return;
+  
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['arrowup']) dy -= 1;
+  if (keys['s'] || keys['arrowdown']) dy += 1;
+  if (keys['a'] || keys['arrowleft']) dx -= 1;
+  if (keys['d'] || keys['arrowright']) dx += 1;
+  dx += joystickVec.x;
+  dy += joystickVec.y;
+  const gp = pollGamepad();
+  dx += gp.dx;
+  dy += gp.dy;
+  const isRunning = runPressed || keys['shift'] || gp.run;
+  const isJumping = jumpPressed || keys[' '] || gp.jump;
+  const isDancing = dancePressed || keys['e'] || gp.dance;
+  
+  const len = Math.hypot(dx, dy);
+  const isMoving = len > 0.15;
+  if (isMoving) {
+    dx /= len; dy /= len;
+    const spd = player.speed * (isRunning ? 2.0 : 1.0);
+    const jitter = 1 + Math.sin(performance.now() / 100) * 0.02;
+    player.x += dx * spd * jitter * dt * 60;
+    player.y += dy * spd * jitter * dt * 60;
+    player.dir = Math.atan2(dy, dx);
+    player.walkPhase += dt * (isRunning ? 20 : 12);
+    player.running = isRunning;
+  } else {
+    player.walkPhase += dt * 2;
+    player.running = false;
+  }
+  
+  if (isJumping && !player.jumping) {
+    player.jumping = true;
+    player.jumpVel = 8;
+  }
+  if (player.jumping) {
+    player.jumpOffset -= player.jumpVel * dt * 3;
+    player.jumpVel -= dt * 30;
+    if (player.jumpOffset > 0) { player.jumpOffset = 0; player.jumpVel = 0; player.jumping = false; }
+  }
+  if (isDancing) player.danceTimer = 0.3;
+  else player.danceTimer = Math.max(0, player.danceTimer - dt);
+  
+  player.x = Math.max(40, Math.min(WORLD_SIZE - 40, player.x));
+  player.y = Math.max(40, Math.min(WORLD_SIZE - 40, player.y));
+  
+  const targetCamX = player.x - W / 2;
+  const targetCamY = player.y - H / 2;
+  camX += (targetCamX - camX) * Math.min(1, dt * 6);
+  camY += (targetCamY - camY) * Math.min(1, dt * 6);
+  
+  // Atualiza todos
+  for (const h of humans) h.update(dt);
+  for (const d of dogs) d.update(dt);
+  for (const c of cats) c.update(dt);
+  for (const p of pigeons) p.update(dt);
+  for (const o of cityObjects) o.update(dt);
+  
+  // Remove habitantes distantes, adiciona novos
+  for (let i = humans.length - 1; i >= 0; i--) {
+    if (Math.hypot(humans[i].x - player.x, humans[i].y - player.y) > 2200) {
+      humans.splice(i, 1);
+    }
+  }
+  while (humans.length < 60) {
+    humans.push(new Humanoid(player.x + rand(-1400, 1400), player.y + rand(-1400, 1400)));
+  }
+  
+  // Carros - spawna carros nas ruas
+  for (let i = cars.length - 1; i >= 0; i--) {
+    cars[i].update(dt);
+    if (Math.hypot(cars[i].x - player.x, cars[i].y - player.y) > 1500) cars.splice(i, 1);
+  }
+  
+  // Spawna carros periodicamente nas ruas horizontais e verticais
+  if (Math.random() < 0.02) {
+    const row = randInt(0, GRID_ROWS);
+    const y = row * CELL_SIZE + ROAD_WIDTH / 2;
+    const dir = Math.random() < 0.5 ? 0 : Math.PI;
+    const x = dir === 0 ? camX - 100 : camX + W + 100;
+    cars.push(new Car(x, y, dir, pick(HARING_COLORS)));
+  }
+  if (Math.random() < 0.02) {
+    const col = randInt(0, GRID_COLS);
+    const x = col * CELL_SIZE + ROAD_WIDTH / 2;
+    const dir = Math.random() < 0.5 ? Math.PI/2 : -Math.PI/2;
+    const y = dir > 0 ? camY - 100 : camY + H + 100;
+    cars.push(new Car(x, y, dir, pick(HARING_COLORS)));
+  }
+  
+  // Checa interação com NPCs
+  checkNPCInteraction();
+  
+  eventTimer -= dt;
+  if (eventTimer <= 0) { eventTimer = rand(3, 8); spawnRandomEvent(); }
+}
+
+// ==================== DRAW ====================
+function draw() {
+  ctx.fillStyle = '#E8E4D0';
+  ctx.fillRect(0, 0, W, H);
+  if (!gameStarted) return;
+  
+  ctx.save();
+  ctx.translate(-camX, -camY);
+  
+  // Chão base do mundo
+  ctx.fillStyle = '#E8E4D0';
+  ctx.fillRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+  
+  // Área do parque (grama verde)
+  if (parkBounds) {
+    ctx.fillStyle = '#B8E6B8';
+    ctx.fillRect(parkBounds.x, parkBounds.y, parkBounds.w, parkBounds.h);
+    // Caminhos internos do parque (cruz)
+    ctx.fillStyle = '#E8DFC0';
+    ctx.fillRect(parkBounds.x, parkBounds.y + parkBounds.h / 2 - 25, parkBounds.w, 50);
+    ctx.fillRect(parkBounds.x + parkBounds.w / 2 - 25, parkBounds.y, 50, parkBounds.h);
+    // Contorno do parque
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(parkBounds.x, parkBounds.y, parkBounds.w, parkBounds.h);
+  }
+  
+  // Calçadas dos quarteirões
+  for (let col = 0; col < GRID_COLS; col++) {
+    for (let row = 0; row < GRID_ROWS; row++) {
+      if (isInPark(col, row)) continue;
+      const full = getBlockFullRect(col, row);
+      haringRect(full.x, full.y, full.w, full.h, '#D4CFB8', 4);
+      const rect = getBlockRect(col, row);
+      haringRect(rect.x, rect.y, rect.w, rect.h, '#F5F0E1', 3);
+    }
+  }
+  
+  // Ruas (asfalto)
+  ctx.fillStyle = '#4A4A4A';
+  for (let row = 0; row <= GRID_ROWS; row++) {
+    ctx.fillRect(0, row * CELL_SIZE, WORLD_SIZE, ROAD_WIDTH);
+  }
+  for (let col = 0; col <= GRID_COLS; col++) {
+    ctx.fillRect(col * CELL_SIZE, 0, ROAD_WIDTH, WORLD_SIZE);
+  }
+  
+  // Faixas centrais
+  ctx.strokeStyle = '#FFE800';
+  ctx.lineWidth = 5;
+  ctx.setLineDash([25, 25]);
+  for (let row = 0; row <= GRID_ROWS; row++) {
+    const y = row * CELL_SIZE + ROAD_WIDTH / 2;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_SIZE, y); ctx.stroke();
+  }
+  for (let col = 0; col <= GRID_COLS; col++) {
+    const x = col * CELL_SIZE + ROAD_WIDTH / 2;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_SIZE); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  
+  // Bordas das ruas
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 4;
+  for (let row = 0; row <= GRID_ROWS; row++) {
+    const y = row * CELL_SIZE;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD_SIZE, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, y + ROAD_WIDTH); ctx.lineTo(WORLD_SIZE, y + ROAD_WIDTH); ctx.stroke();
+  }
+  for (let col = 0; col <= GRID_COLS; col++) {
+    const x = col * CELL_SIZE;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD_SIZE); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + ROAD_WIDTH, 0); ctx.lineTo(x + ROAD_WIDTH, WORLD_SIZE); ctx.stroke();
+  }
+  
+  // Borda do mundo
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 12;
+  ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+  
+  // Redesenha a grama do parque por cima das ruas que passam
+  if (parkBounds) {
+    ctx.fillStyle = '#B8E6B8';
+    ctx.fillRect(parkBounds.x, parkBounds.y, parkBounds.w, parkBounds.h);
+    // Caminhos
+    ctx.fillStyle = '#E8DFC0';
+    ctx.fillRect(parkBounds.x, parkBounds.y + parkBounds.h / 2 - 25, parkBounds.w, 50);
+    ctx.fillRect(parkBounds.x + parkBounds.w / 2 - 25, parkBounds.y, 50, parkBounds.h);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(parkBounds.x, parkBounds.y, parkBounds.w, parkBounds.h);
+  }
+  
+  ctx.restore();
+  
+  // Desenha tudo com ordenação por Y
+  const allDrawables = [];
+  for (const o of cityObjects) allDrawables.push({ y: o.y, draw: () => o.draw(camX, camY) });
+  for (const h of humans) allDrawables.push({ y: h.y, draw: () => h.draw(camX, camY) });
+  for (const c of cars) allDrawables.push({ y: c.y, draw: () => c.draw(camX, camY) });
+  for (const d of dogs) allDrawables.push({ y: d.y, draw: () => d.draw(camX, camY) });
+  for (const c of cats) allDrawables.push({ y: c.y, draw: () => c.draw(camX, camY) });
+  for (const p of pigeons) allDrawables.push({ y: p.y + 40, draw: () => p.draw(camX, camY) });
+  allDrawables.sort((a, b) => a.y - b.y);
+  for (const d of allDrawables) d.draw();
+  
+  drawPlayer();
+}
+
+function drawPlayer() {
+  const sx = player.x - camX;
+  const sy = player.y - camY + player.jumpOffset;
+  const s = 1.2;
+  const isMoving = Math.hypot(joystickVec.x, joystickVec.y) > 0.15 ||
+    keys['w'] || keys['a'] || keys['s'] || keys['d'] ||
+    keys['arrowup'] || keys['arrowdown'] || keys['arrowleft'] || keys['arrowright'];
+  const dancing = player.danceTimer > 0;
+  const running = player.running;
+  const bob = dancing ? Math.sin(performance.now() / 80) * 4 : Math.sin(player.walkPhase) * 1.8;
+  const legSwing = Math.sin(player.walkPhase) * 6;
+  const armSwing = Math.sin(player.walkPhase + Math.PI) * 6;
+  
+  if (isMoving && !player.jumping) {
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    const t = performance.now() / 100;
+    const count = running ? 5 : 3;
+    for (let i = 0; i < count; i++) {
+      const a = t + i * 2.1;
+      const r = running ? 40 : 32;
+      const bx = sx + Math.cos(a) * r;
+      const by = sy + 5 + Math.sin(a) * r * 0.5;
+      ctx.beginPath(); ctx.moveTo(bx - 5, by); ctx.lineTo(bx + 5, by); ctx.stroke();
+    }
+  }
+  if (player.jumping) {
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    for (let i = 0; i < 4; i++) {
+      const a = performance.now() / 200 + i * Math.PI / 2;
+      const rx = sx + Math.cos(a) * 30;
+      const ry = sy + Math.sin(a) * 20;
+      ctx.beginPath();
+      ctx.moveTo(rx - 4, ry); ctx.lineTo(rx + 4, ry);
+      ctx.moveTo(rx, ry - 4); ctx.lineTo(rx, ry + 4);
+      ctx.stroke();
+    }
+  }
+  if (dancing) {
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+    const t = performance.now() / 100;
+    for (let i = 0; i < 6; i++) {
+      const a = t + i * Math.PI / 3;
+      const rx = sx + Math.cos(a) * 40;
+      const ry = sy - 10 + Math.sin(a) * 30;
+      ctx.beginPath(); ctx.arc(rx, ry, 4, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
+  
+  const headY = sy - 26 * s + bob;
+  const bodyY = sy - 6 * s + bob;
+  
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.beginPath();
+  ctx.ellipse(sx, sy + 20, 16, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(sx - 5, bodyY + 14);
+  ctx.lineTo(sx - 5 + (isMoving || dancing ? legSwing : 0), sy + 18);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(sx + 5, bodyY + 14);
+  ctx.lineTo(sx + 5 - (isMoving || dancing ? legSwing : 0), sy + 18);
+  ctx.stroke();
+  
+  ctx.lineWidth = 6;
+  let armRaise = dancing ? -14 : (running ? 8 : 0);
+  ctx.beginPath();
+  ctx.moveTo(sx - 9, bodyY);
+  ctx.lineTo(sx - 18, bodyY + 14 + (isMoving ? armSwing : 0) + armRaise);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(sx + 9, bodyY);
+  ctx.lineTo(sx + 18, bodyY + 14 - (isMoving ? armSwing : 0) + armRaise);
+  ctx.stroke();
+  
+  haringRect(sx - 10, bodyY - 8, 20, 24, player.color, 5);
+  haringCircle(sx, headY, 11, player.skinColor, 5);
+  
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(sx, headY + 3, 5, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.arc(sx - 4, headY - 2, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sx + 4, headY - 2, 2, 0, Math.PI * 2); ctx.fill();
+  
+  const heartBob = Math.sin(performance.now() / 400) * 2;
+  ctx.save();
+  ctx.translate(sx, headY - 24 + heartBob);
+  ctx.beginPath();
+  ctx.moveTo(0, 4);
+  ctx.bezierCurveTo(-7, -4, -3.5, -11, 0, -5);
+  ctx.bezierCurveTo(3.5, -11, 7, -4, 0, 4);
+  ctx.fillStyle = '#FF2D95'; ctx.fill();
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5; ctx.stroke();
+  ctx.restore();
+}
+
+// ==================== LOOP ====================
+let lastTime = performance.now();
+function loop() {
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - lastTime) / 1000);
+  lastTime = now;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+// Previne gestos
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('gesturechange', e => e.preventDefault());
+document.addEventListener('gestureend', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</body>
+</html>
